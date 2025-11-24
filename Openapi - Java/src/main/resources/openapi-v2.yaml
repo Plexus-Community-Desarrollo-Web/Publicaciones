@@ -1,0 +1,576 @@
+openapi: 3.1.0
+info:
+  title: Library Management API
+  version: 2.0.0
+  description: |
+    API v2 con mejoras: 
+    - Nuevo modelo de autor separado
+    - Soporte para múltiples autores por libro
+    - Sistema de reservas
+    - Notificaciones
+    - Búsqueda avanzada con Elasticsearch-style
+servers:
+  - url: http://localhost:8080/api/v2
+
+paths:
+  /books:
+    get:
+      operationId: getBooksV2
+      tags: [Books]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+        - name: q
+          in: query
+          description: Búsqueda full-text
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de libros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookCollectionResponseV2'
+    post:
+      operationId: createBookV2
+      tags: [Books]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookRequestV2'
+      responses:
+        '201':
+          description: Libro creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponseV2'
+
+  /books/{bookId}:
+    get:
+      operationId: getBookV2
+      tags: [Books]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Detalle del libro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponseV2'
+    put:
+      operationId: updateBookV2
+      tags: [Books]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookRequestV2'
+      responses:
+        '200':
+          description: Libro actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponseV2'
+    delete:
+      operationId: deleteBookV2
+      tags: [Books]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '204':
+          description: Libro eliminado
+
+  /books/{bookId}/reservations:
+    get:
+      operationId: getBookReservationsV2
+      tags: [Reservations]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Reservas del libro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationCollectionResponseV2'
+    post:
+      operationId: createReservationV2
+      tags: [Reservations]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReservationRequestV2'
+      responses:
+        '201':
+          description: Reserva creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResponseV2'
+
+  /authors:
+    get:
+      operationId: getAuthorsV2
+      tags: [Authors]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: name
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lista de autores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorCollectionResponseV2'
+    post:
+      operationId: createAuthorV2
+      tags: [Authors]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAuthorRequestV2'
+      responses:
+        '201':
+          description: Autor creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorResponseV2'
+
+  /authors/{authorId}:
+    get:
+      operationId: getAuthorV2
+      tags: [Authors]
+      parameters:
+        - $ref: '#/components/parameters/AuthorId'
+      responses:
+        '200':
+          description: Detalle del autor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorResponseV2'
+
+  /authors/{authorId}/books:
+    get:
+      operationId: getAuthorBooksV2
+      tags: [Authors]
+      parameters:
+        - $ref: '#/components/parameters/AuthorId'
+      responses:
+        '200':
+          description: Libros del autor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookCollectionResponseV2'
+
+  /reservations/{reservationId}/cancel:
+    post:
+      operationId: cancelReservationV2
+      tags: [Reservations]
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: Reserva cancelada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResponseV2'
+
+  /notifications:
+    get:
+      operationId: getNotificationsV2
+      tags: [Notifications]
+      parameters:
+        - name: memberId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: read
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Notificaciones
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationCollectionResponseV2'
+
+  /notifications/{notificationId}/mark-read:
+    post:
+      operationId: markNotificationReadV2
+      tags: [Notifications]
+      parameters:
+        - $ref: '#/components/parameters/NotificationId'
+      responses:
+        '200':
+          description: Notificación marcada como leída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponseV2'
+
+components:
+  parameters:
+    BookId:
+      name: bookId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AuthorId:
+      name: authorId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NotificationId:
+      name: notificationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # Book Schemas V2
+    BookResponseV2:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        authors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorSummaryV2'
+        isbn:
+          type: string
+        publishedYear:
+          type: integer
+        category:
+          type: string
+        language:
+          type: string
+        pages:
+          type: integer
+        publisher:
+          type: string
+        description:
+          type: string
+        edition:
+          type: string
+        format:
+          type: string
+          enum: [HARDCOVER, PAPERBACK, EBOOK, AUDIOBOOK]
+        available:
+          type: boolean
+        totalCopies:
+          type: integer
+        availableCopies:
+          type: integer
+        reservedCopies:
+          type: integer
+        averageRating:
+          type: number
+        totalReviews:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BookCollectionResponseV2:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookResponseV2'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    CreateBookRequestV2:
+      type: object
+      required:
+        - title
+        - authorIds
+        - isbn
+        - category
+        - totalCopies
+      properties:
+        title:
+          type: string
+        authorIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+        isbn:
+          type: string
+        publishedYear:
+          type: integer
+        category:
+          type: string
+        language:
+          type: string
+        pages:
+          type: integer
+        publisher:
+          type: string
+        description:
+          type: string
+        edition:
+          type: string
+        format:
+          type: string
+          enum: [HARDCOVER, PAPERBACK, EBOOK, AUDIOBOOK]
+        totalCopies:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    UpdateBookRequestV2:
+      type: object
+      properties:
+        title:
+          type: string
+        authorIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        publishedYear:
+          type: integer
+        category:
+          type: string
+        description:
+          type: string
+        edition:
+          type: string
+        totalCopies:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+
+    # Author Schemas V2
+    AuthorResponseV2:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        biography:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        nationality:
+          type: string
+        website:
+          type: string
+        totalBooks:
+          type: integer
+
+    AuthorSummaryV2:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    AuthorCollectionResponseV2:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthorResponseV2'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    CreateAuthorRequestV2:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        biography:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        nationality:
+          type: string
+        website:
+          type: string
+
+    # Reservation Schemas V2
+    ReservationResponseV2:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        bookTitle:
+          type: string
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        reservationDate:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [PENDING, READY, FULFILLED, CANCELLED, EXPIRED]
+        position:
+          type: integer
+        notificationSent:
+          type: boolean
+
+    ReservationCollectionResponseV2:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReservationResponseV2'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    CreateReservationRequestV2:
+      type: object
+      required:
+        - memberId
+      properties:
+        memberId:
+          type: string
+          format: uuid
+
+    # Notification Schemas V2
+    NotificationResponseV2:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [LOAN_DUE_SOON, LOAN_OVERDUE, RESERVATION_READY, RESERVATION_EXPIRED, FINE_ADDED]
+        title:
+          type: string
+        message:
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    NotificationCollectionResponseV2:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationResponseV2'
+        page:
+          $ref: '#/components/schemas/PageMetadata'
+
+    # Common
+    PageMetadata:
+      type: object
+      properties:
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        number:
+          type: integer

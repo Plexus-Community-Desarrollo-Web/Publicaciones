@@ -1,0 +1,959 @@
+openapi: 3.1.0
+info:
+  title: Library Management API
+  version: 1.0.0
+  description: API completa para gestión de biblioteca
+servers:
+  - url: http://localhost:8080/api/v1
+
+paths:
+  /books:
+    get:
+      operationId: getBooksV1
+      tags: [Books]
+      summary: Listar libros con filtros y paginación
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [title, author, publishedYear, createdAt]
+            default: title
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: title
+          in: query
+          schema:
+            type: string
+        - name: author
+          in: query
+          schema:
+            type: string
+        - name: isbn
+          description: ISBN 10
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [FICTION, NON_FICTION, SCIENCE, HISTORY, BIOGRAPHY, TECHNOLOGY]
+        - name: available
+          in: query
+          schema:
+            type: boolean
+        - name: minYear
+          in: query
+          schema:
+            type: integer
+        - name: maxYear
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista paginada de libros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookCollectionResponseV1'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    post:
+      operationId: createBookV1
+      tags: [Books]
+      summary: Crear nuevo libro
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookRequestV1'
+      responses:
+        '201':
+          description: Libro creado
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponseV1'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /books/{bookId}:
+    get:
+      operationId: getBookV1
+      tags: [Books]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Detalle del libro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponseV1'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: updateBookV1
+      tags: [Books]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookRequestV1'
+      responses:
+        '200':
+          description: Libro actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponseV1'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: patchBookV1
+      tags: [Books]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchBookRequestV1'
+      responses:
+        '200':
+          description: Libro parcialmente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookResponseV1'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      operationId: deleteBookV1
+      tags: [Books]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '204':
+          description: Libro eliminado
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: No se puede eliminar (tiene préstamos activos)
+
+  /books/{bookId}/reviews:
+    get:
+      operationId: getBookReviewsV1
+      tags: [Reviews]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Reseñas del libro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewCollectionResponseV1'
+    post:
+      operationId: createBookReviewV1
+      tags: [Reviews]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequestV1'
+      responses:
+        '201':
+          description: Reseña creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewResponseV1'
+
+  /books/{bookId}/loans:
+    get:
+      operationId: getBookLoansV1
+      tags: [Loans]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, RETURNED, OVERDUE]
+      responses:
+        '200':
+          description: Préstamos del libro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanCollectionResponseV1'
+    post:
+      operationId: loanBookV1
+      tags: [Loans]
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLoanRequestV1'
+      responses:
+        '201':
+          description: Préstamo creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponseV1'
+        '409':
+          description: Libro no disponible
+
+  /loans/{loanId}:
+    get:
+      operationId: getLoanV1
+      tags: [Loans]
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      responses:
+        '200':
+          description: Detalle del préstamo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponseV1'
+
+  /loans/{loanId}/return:
+    post:
+      operationId: returnLoanV1
+      tags: [Loans]
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnLoanRequestV1'
+      responses:
+        '200':
+          description: Préstamo devuelto
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponseV1'
+
+  /loans/{loanId}/renew:
+    post:
+      operationId: renewLoanV1
+      tags: [Loans]
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenewLoanRequestV1'
+      responses:
+        '200':
+          description: Préstamo renovado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanResponseV1'
+        '409':
+          description: No se puede renovar
+
+  /members:
+    get:
+      operationId: getMembersV1
+      tags: [Members]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: email
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, SUSPENDED, EXPIRED]
+      responses:
+        '200':
+          description: Lista de miembros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberCollectionResponseV1'
+    post:
+      operationId: createMemberV1
+      tags: [Members]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemberRequestV1'
+      responses:
+        '201':
+          description: Miembro creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponseV1'
+
+  /members/{memberId}:
+    get:
+      operationId: getMemberV1
+      tags: [Members]
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        '200':
+          description: Detalle del miembro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponseV1'
+    put:
+      operationId: updateMemberV1
+      tags: [Members]
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemberRequestV1'
+      responses:
+        '200':
+          description: Miembro actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponseV1'
+
+  /members/{memberId}/loans:
+    get:
+      operationId: getMemberLoansV1
+      tags: [Members]
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ACTIVE, RETURNED, OVERDUE]
+      responses:
+        '200':
+          description: Préstamos del miembro
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoanCollectionResponseV1'
+
+  /members/{memberId}/suspend:
+    post:
+      operationId: suspendMemberV1
+      tags: [Members]
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuspendMemberRequestV1'
+      responses:
+        '200':
+          description: Miembro suspendido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponseV1'
+
+  /members/{memberId}/activate:
+    post:
+      operationId: activateMemberV1
+      tags: [Members]
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        '200':
+          description: Miembro activado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberResponseV1'
+
+  /statistics:
+    get:
+      operationId: getStatisticsV1
+      tags: [Statistics]
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Estadísticas de la biblioteca
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticsResponseV1'
+
+components:
+  parameters:
+    BookId:
+      name: bookId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    LoanId:
+      name: loanId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # Book Schemas
+    BookResponseV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        author:
+          type: string
+        isbn:
+          type: string
+        publishedYear:
+          type: integer
+        category:
+          type: string
+          enum: [FICTION, NON_FICTION, SCIENCE, HISTORY, BIOGRAPHY, TECHNOLOGY]
+        language:
+          type: string
+        pages:
+          type: integer
+        publisher:
+          type: string
+        description:
+          type: string
+        available:
+          type: boolean
+        totalCopies:
+          type: integer
+        availableCopies:
+          type: integer
+        averageRating:
+          type: number
+          format: double
+        totalReviews:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    BookCollectionResponseV1:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookResponseV1'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    CreateBookRequestV1:
+      type: object
+      required:
+        - title
+        - author
+        - isbn
+        - category
+        - totalCopies
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        author:
+          type: string
+          minLength: 1
+          maxLength: 255
+        isbn:
+          type: string
+          pattern: '^(?:ISBN(?:-1[03])?:? )?(?=[0-9X]{10}$|(?=(?:[0-9]+[- ]){3})[- 0-9X]{13}$|97[89][0-9]{10}$|(?=(?:[0-9]+[- ]){4})[- 0-9]{17}$)(?:97[89][- ]?)?[0-9]{1,5}[- ]?[0-9]+[- ]?[0-9]+[- ]?[0-9X]$'
+        publishedYear:
+          type: integer
+          minimum: 1000
+          maximum: 2100
+        category:
+          type: string
+          enum: [FICTION, NON_FICTION, SCIENCE, HISTORY, BIOGRAPHY, TECHNOLOGY]
+        language:
+          type: string
+          default: en
+        pages:
+          type: integer
+          minimum: 1
+        publisher:
+          type: string
+        description:
+          type: string
+          maxLength: 2000
+        totalCopies:
+          type: integer
+          minimum: 1
+
+    UpdateBookRequestV1:
+      type: object
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        publishedYear:
+          type: integer
+        category:
+          type: string
+          enum: [FICTION, NON_FICTION, SCIENCE, HISTORY, BIOGRAPHY, TECHNOLOGY]
+        language:
+          type: string
+        pages:
+          type: integer
+        publisher:
+          type: string
+        description:
+          type: string
+        totalCopies:
+          type: integer
+
+    PatchBookRequestV1:
+      type: object
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        description:
+          type: string
+
+    # Review Schemas
+    ReviewResponseV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ReviewCollectionResponseV1:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewResponseV1'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    CreateReviewRequestV1:
+      type: object
+      required:
+        - memberId
+        - rating
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 1000
+
+    # Loan Schemas
+    LoanResponseV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        bookTitle:
+          type: string
+        memberId:
+          type: string
+          format: uuid
+        memberName:
+          type: string
+        loanDate:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date
+        returnDate:
+          type: string
+          format: date-time
+        renewalCount:
+          type: integer
+        status:
+          type: string
+          enum: [ACTIVE, RETURNED, OVERDUE]
+        fine:
+          type: number
+          format: double
+
+    LoanCollectionResponseV1:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LoanResponseV1'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    CreateLoanRequestV1:
+      type: object
+      required:
+        - memberId
+        - dueDate
+      properties:
+        memberId:
+          type: string
+          format: uuid
+        dueDate:
+          type: string
+          format: date
+
+    ReturnLoanRequestV1:
+      type: object
+      properties:
+        condition:
+          type: string
+          enum: [EXCELLENT, GOOD, FAIR, DAMAGED]
+          default: GOOD
+        notes:
+          type: string
+
+    RenewLoanRequestV1:
+      type: object
+      properties:
+        newDueDate:
+          type: string
+          format: date
+
+    # Member Schemas
+    MemberResponseV1:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        address:
+          $ref: '#/components/schemas/AddressV1'
+        membershipType:
+          type: string
+          enum: [BASIC, PREMIUM, STUDENT]
+        status:
+          type: string
+          enum: [ACTIVE, SUSPENDED, EXPIRED]
+        memberSince:
+          type: string
+          format: date
+        expiresAt:
+          type: string
+          format: date
+        activeLoans:
+          type: integer
+        totalLoans:
+          type: integer
+        currentFines:
+          type: number
+          format: double
+
+    MemberCollectionResponseV1:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberResponseV1'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    CreateMemberRequestV1:
+      type: object
+      required:
+        - email
+        - firstName
+        - lastName
+        - membershipType
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        address:
+          $ref: '#/components/schemas/AddressV1'
+        membershipType:
+          type: string
+          enum: [BASIC, PREMIUM, STUDENT]
+
+    UpdateMemberRequestV1:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phoneNumber:
+          type: string
+        address:
+          $ref: '#/components/schemas/AddressV1'
+
+    SuspendMemberRequestV1:
+      type: object
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+        until:
+          type: string
+          format: date
+
+    AddressV1:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+
+    # Statistics
+    StatisticsResponseV1:
+      type: object
+      properties:
+        totalBooks:
+          type: integer
+        totalMembers:
+          type: integer
+        activeLoans:
+          type: integer
+        overdueLoans:
+          type: integer
+        totalLoansInPeriod:
+          type: integer
+        mostPopularBooks:
+          type: array
+          items:
+            $ref: '#/components/schemas/PopularBookV1'
+        loansByCategory:
+          type: object
+          additionalProperties:
+            type: integer
+
+    PopularBookV1:
+      type: object
+      properties:
+        bookId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        loanCount:
+          type: integer
+
+    # Error Response
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+
+    FieldError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+        rejectedValue:
+          type: object
+
+  responses:
+    BadRequest:
+      description: Petición inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflicto con el estado actual
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
