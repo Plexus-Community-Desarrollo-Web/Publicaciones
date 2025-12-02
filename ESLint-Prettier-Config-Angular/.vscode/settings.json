@@ -1,0 +1,13 @@
+{
+  "editor.formatOnPaste": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll": "explicit",
+    "source.sortMembers": "explicit"
+  },
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#4A0F61",
+    "titleBar.activeBackground": "#681588",
+    "titleBar.activeForeground": "#FDF9FE"
+  }
+}
